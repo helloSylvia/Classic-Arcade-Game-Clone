@@ -1,15 +1,40 @@
 // 这是我们的玩家要躲避的敌人 
+//--- 修改1； 严格模式
+"use strict";
+// 继承
+function inherit(father,son){
+	//父的副本
+	var farCopy = Object.create(father.prototype);
+	// 更改自己的constructor
+	farCopy.constructor = son;
+	son.prototype = farCopy;
+}
+// ---修改2： 声明父类  角色
+var Role = function(x,y,sprite){
+	this.x = x;
+    this.y = y;
+	this.sprite = sprite;
+};
+Role.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+//--- 声明敌人类
 var Enemy = function() {
     // 要应用到每个敌人的实例的变量写在这里
     // 我们已经提供了一个来帮助你实现更多
-
     // 敌人的图片或者雪碧图，用一个我们提供的工具函数来轻松的加载文件
-    this.sprite = 'images/enemy-bug.png';
-    this.x = -30;
-    this.y = random(50,240);
+    var y = random(50,240);
+    Role.call(this,-30,y,'images/enemy-bug.png');
     this.speed = random(100,200);
 };
-
+inherit(Role,Enemy);
+//---  我自己的玩家类
+var Player = function(){
+	// --- 修改玩家y值为405
+	 Role.call(this,205,405,'images/char-boy.png');
+     this.checkCollisions();
+};
+inherit(Role,Player);
 //--- 敌人出现的不同位置
 function random(minNum,maxNum){
 	var num = maxNum -  minNum+1;
@@ -30,58 +55,54 @@ Enemy.prototype.update = function(dt) {
     // 都是以同样的速度运行的
 };
 
-// 此为游戏必须的函数，用来在屏幕上画出敌人，
-Enemy.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
-
 // 现在实现你自己的玩家类
 // 这个类需要一个 update() 函数， render() 函数和一个 handleInput()函数
 
-//---  我自己的玩家类
-var Player = function(){
-	// 玩家图
-	 this.sprite = 'images/char-boy.png';
-     this.x = 205;
-     this.y = 430;
-     this.checkCollisions();
-};
-
-//--- 画出玩家
-Player.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-    
-};
 // --- 防止不到河岸就弹出
+// --- 修改5 解决玩家没有到达蓝色区域，就提前提示成功
+var count = 0;
 Player.prototype.update = function(dt){
-    if(this.y === -5){
-            alert("你成功了！");
+	// --- 修改4  等于改成小于 去判断 
+    if(this.y <= -10){
+    	count += 1;// 延迟时间
+    	if(count === 3 ){
+    		alert("你成功了！");
             this.x = 205;
-            this.y = 430;
+            // --- 修改3 玩家起始y
+            this.y = 405;
+            // 不要忘了把count也恢复原值，不然下次计时，从3开始了，就会一直没有提示
+            count = 0;
+            
+    	}
     }
 };
 //--- 控制玩家的位置
 Player.prototype.handleInput = function(movement){
-	
+	// --- 修改6  硬编码
+	// 玩家的界限
+	var left_edge = 3;
+	var right_edge = 407;
+	var top_edge = 15;
+	var down_edge = 405;
+	// 移动值
+	var bike_x = 101;
+	var bike_y = 83;
 	  switch (movement) {
 	       case 'left':
-	          if (this.x >3 ) {
-	            	this.x -= 101;
+	          if (this.x > left_edge) {
+	            	this.x -= bike_x;
 	          } break;
 	       case 'right':
-	          if (this.x < 407) {
-	            this.x += 101;
+	          if (this.x < right_edge) {
+	            this.x += bike_x;
 	          } break;
 	       case 'up':
-	          if (this.y > 15) {
-	            this.y -= 83;
-//	            console.log(this.x+ "---"+ this.y);
-	          }else {
-	          	this.y -= 20;
+	          if (this.y > top_edge) {
+	            this.y -= bike_y;
 	          }break;
 	       case 'down':
-	          if (this.y < 430) {
-	             this.y += 83;
+	          if (this.y < down_edge) {
+	             this.y += bike_y;
 	          } break;
    }
 };
@@ -89,10 +110,12 @@ Player.prototype.handleInput = function(movement){
 //---实现碰撞函数
 Player.prototype.checkCollisions = function(){
     for(var i=0;i<allEnemies.length;i++){
-        if((this.y - allEnemies[i].y)<40){
+    	// --- 修改7 y值没有取绝对值 导致有些情况  即-40的时候 也会发生碰撞
+        if((Math.abs(this.y - allEnemies[i].y))<40){
             if((Math.abs(this.x - allEnemies[i].x))<40){
                 this.x = 205;
-                this.y = 430;
+                // --- 修改3 玩家起始位置设为405
+                this.y = 405;
             }
        }
     }
